@@ -2,6 +2,12 @@
  * Excel单词音标生成器 - 主应用脚本
  */
 
+// 全局变量
+let workbook = null; // 存储当前工作簿
+let excelData = null; // 存储提取的数据
+let currentFileName = ''; // 当前处理的文件名
+let isProcessingPhonetics = false; // 是否正在处理音标
+
 // 应用初始化
 document.addEventListener('DOMContentLoaded', () => {
     Logger.info('初始化', '应用开始初始化');
@@ -14,6 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 检查外部库
     checkExternalLibraries();
+    
+    // 初始化音标处理模块
+    initPhoneticModule();
     
     Logger.info('初始化', '应用初始化完成');
 });
@@ -61,6 +70,20 @@ function checkExternalLibraries() {
     } else {
         Logger.critical('依赖', 'SheetJS库加载失败，Excel处理功能无法使用');
         showError('无法加载Excel处理库(SheetJS)，请检查网络连接后刷新页面。');
+    }
+}
+
+/**
+ * 初始化音标处理模块
+ */
+async function initPhoneticModule() {
+    Logger.debug('初始化', '开始初始化音标处理模块');
+    try {
+        await PhonicsProcessor.initPhonetics();
+        Logger.info('初始化', '音标处理模块初始化成功');
+    } catch (error) {
+        Logger.error('初始化', `音标处理模块初始化失败: ${error.message}`);
+        showError('无法加载音标词典，部分功能可能无法正常工作。');
     }
 }
 
@@ -152,8 +175,12 @@ function initUIEvents() {
             downloadBtn.classList.remove('active');
         }, 200);
         
-        // 在这里实现下载功能
-        // 此功能将在阶段五实现
+        // 检查是否有数据可以下载
+        if (workbook && excelData) {
+            exportExcelWithPhonetics();
+        } else {
+            showError('没有可用的数据可以导出。请先上传Excel文件。');
+        }
     });
     
     // 响应式布局调整
@@ -209,6 +236,7 @@ function adjustLayout() {
  */
 function handleExcelFile(file) {
     Logger.info('文件处理', `开始处理Excel文件: ${file.name}`);
+    currentFileName = file.name;
     
     // 检查文件类型
     if (!file.name.endsWith('.xlsx')) {
@@ -228,31 +256,276 @@ function handleExcelFile(file) {
     updateStatus(`正在处理文件: ${file.name}...`);
     document.querySelector('.container').classList.add('loading');
     
-    // 此处将在阶段三完成文件读取和处理
-    // 目前仅显示模拟数据作为示例
+    // 创建FileReader读取文件
+    const reader = new FileReader();
     
-    // 模拟处理延迟
-    setTimeout(() => {
-        // 移除加载状态
+    reader.onload = function(e) {
+        try {
+            // 使用SheetJS库读取Excel数据
+            const data = new Uint8Array(e.target.result);
+            workbook = XLSX.read(data, { type: 'array' });
+            Logger.info('文件处理', `成功读取Excel文件，包含 ${workbook.SheetNames.length} 个工作表`);
+            
+            // 获取第一个工作表
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // 将工作表转换为JSON
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            Logger.debug('文件处理', `工作表包含 ${jsonData.length} 行数据`);
+            
+            // 查找"词"列的索引
+            let wordColumnIndex = -1;
+            if (jsonData.length > 0) {
+                const headers = jsonData[0];
+                for (let i = 0; i < headers.length; i++) {
+                    if (headers[i] === '词') {
+                        wordColumnIndex = i;
+                        Logger.info('文件处理', `找到"词"列，索引为 ${wordColumnIndex}`);
+                        break;
+                    }
+                }
+            }
+            
+            if (wordColumnIndex === -1) {
+                Logger.warning('文件处理', '未找到"词"列');
+                showError('Excel文件中未找到"词"列。请确保文件包含一个名为"词"的列。');
+                document.querySelector('.container').classList.remove('loading');
+                return;
+            }
+            
+            // 提取"词"列的数据
+            excelData = [];
+            for (let i = 1; i < jsonData.length; i++) { // 从第2行开始，跳过标题行
+                if (jsonData[i] && jsonData[i][wordColumnIndex]) {
+                    // 去重处理 - 如果单词已经存在，跳过
+                    const word = jsonData[i][wordColumnIndex];
+                    if (!excelData.some(item => item.word === word)) {
+                        excelData.push({
+                            word: word,
+                            usPhonetic: 'Loading...', // 加载中状态
+                            ukPhonetic: 'Loading...'  // 加载中状态
+                        });
+                    }
+                }
+            }
+            
+            Logger.info('文件处理', `成功提取了 ${excelData.length} 个单词`);
+            
+            // 显示前5行预览数据
+            const previewData = excelData.slice(0, Math.min(5, excelData.length));
+            displayPreview(previewData);
+            
+            // 启用下载按钮
+            document.getElementById('downloadBtn').disabled = false;
+            
+            // 更新状态
+            updateStatus(`文件 ${file.name} 处理完成，共提取 ${excelData.length} 个单词`);
+            
+            // 开始查询音标
+            processPhonetics();
+            
+            Logger.info('文件处理', `文件 ${file.name} 处理完成`);
+        } catch (err) {
+            Logger.error('文件处理', `处理Excel文件时出错: ${err.message}`);
+            showError(`无法处理Excel文件: ${err.message}`);
+        } finally {
+            document.querySelector('.container').classList.remove('loading');
+        }
+    };
+    
+    reader.onerror = function() {
+        Logger.error('文件处理', '读取文件时发生错误');
+        showError('读取文件时发生错误，请检查文件是否损坏。');
         document.querySelector('.container').classList.remove('loading');
+    };
+    
+    // 读取文件
+    reader.readAsArrayBuffer(file);
+}
+
+/**
+ * 处理单词音标
+ */
+async function processPhonetics() {
+    if (isProcessingPhonetics || !excelData || excelData.length === 0) return;
+    
+    isProcessingPhonetics = true;
+    Logger.info('音标处理', '开始处理单词音标');
+    
+    try {
+        // 显示处理状态
+        updateStatus('正在查询音标，请稍候...');
         
-        // 显示示例预览数据
-        const previewData = [
-            { word: 'Hello', usPhonetic: '/həˈloʊ/', ukPhonetic: '/həˈləʊ/' },
-            { word: 'World', usPhonetic: '/wɜːrld/', ukPhonetic: '/wɜːld/' },
-            { word: 'Example', usPhonetic: '/ɪɡˈzæmpəl/', ukPhonetic: '/ɪɡˈzɑːmpəl/' }
-        ];
+        // 预计算需要处理的单词数量
+        const totalWords = excelData.length;
+        let processedCount = 0;
         
+        // 批量处理音标，并更新进度
+        const results = await PhonicsProcessor.batchQueryPhonetics(excelData, (processed, total) => {
+            processedCount = processed;
+            const percent = Math.floor((processed / total) * 100);
+            updateStatus(`正在查询音标 (${percent}%)，已处理 ${processed}/${total} 个单词...`);
+            
+            // 不在每个进度回调中更新预览，避免频繁刷新UI导致显示问题
+        });
+        
+        // 更新数据和UI
+        excelData = results;
+        
+        // 更新预览显示 - 只显示前5个单词
+        const previewData = excelData.slice(0, Math.min(5, excelData.length));
         displayPreview(previewData);
         
-        // 启用下载按钮
-        document.getElementById('downloadBtn').disabled = false;
-        
         // 更新状态
-        updateStatus(`文件 ${file.name} 处理完成，可以下载结果`);
+        updateStatus(`音标查询完成，共处理 ${excelData.length} 个单词`);
         
-        Logger.info('文件处理', `文件 ${file.name} 初步处理完成`);
-    }, 1500);
+        Logger.info('音标处理', `音标处理完成，共处理 ${excelData.length} 个单词`);
+    } catch (error) {
+        Logger.error('音标处理', `处理音标时出错: ${error.message}`);
+        showError(`音标查询过程中出错: ${error.message}`);
+    } finally {
+        isProcessingPhonetics = false;
+    }
+}
+
+/**
+ * 导出带音标的Excel文件
+ */
+function exportExcelWithPhonetics() {
+    if (!workbook || !excelData || excelData.length === 0) {
+        showError('没有可用的数据可以导出。');
+        return;
+    }
+    
+    Logger.info('导出', '开始导出带音标的Excel文件');
+    
+    try {
+        // 获取工作表
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // 将工作表转换为JSON进行处理
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // 找到"词"列的索引
+        let wordColumnIndex = -1;
+        if (jsonData.length > 0) {
+            const headers = jsonData[0];
+            for (let i = 0; i < headers.length; i++) {
+                if (headers[i] === '词') {
+                    wordColumnIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        if (wordColumnIndex === -1) {
+            showError('无法找到"词"列，导出失败。');
+            return;
+        }
+        
+        // 检查是否已经存在音标列
+        let usPhoneticIndex = -1;
+        let ukPhoneticIndex = -1;
+        
+        if (jsonData.length > 0) {
+            const headers = jsonData[0];
+            for (let i = 0; i < headers.length; i++) {
+                if (headers[i] === '美式音标') {
+                    usPhoneticIndex = i;
+                }
+                if (headers[i] === '英式音标') {
+                    ukPhoneticIndex = i;
+                }
+            }
+        }
+        
+        // 如果没有音标列，添加音标列标题
+        // 否则，使用已有的列
+        if (usPhoneticIndex === -1 && ukPhoneticIndex === -1) {
+            // 添加新的音标列
+            jsonData[0].push('美式音标');
+            jsonData[0].push('英式音标');
+            
+            // 更新索引值
+            usPhoneticIndex = jsonData[0].length - 2;
+            ukPhoneticIndex = jsonData[0].length - 1;
+            
+            // 为所有数据行添加空值，保持数组长度一致
+            for (let i = 1; i < jsonData.length; i++) {
+                if (jsonData[i]) {
+                    // 确保每行长度与标题行一致
+                    while (jsonData[i].length < jsonData[0].length) {
+                        jsonData[i].push('');
+                    }
+                }
+            }
+            
+            Logger.info('导出', '添加了音标列');
+        } else {
+            Logger.info('导出', '使用已有的音标列');
+        }
+        
+        // 为每行数据添加或更新音标
+        for (let i = 1; i < jsonData.length; i++) {
+            if (jsonData[i] && jsonData[i][wordColumnIndex]) {
+                const word = jsonData[i][wordColumnIndex];
+                
+                // 在excelData中查找对应单词的音标
+                const wordData = excelData.find(item => item.word === word);
+                
+                if (wordData) {
+                    // 更新音标数据
+                    if (usPhoneticIndex >= 0) {
+                        jsonData[i][usPhoneticIndex] = wordData.usPhonetic;
+                    }
+                    if (ukPhoneticIndex >= 0) {
+                        jsonData[i][ukPhoneticIndex] = wordData.ukPhonetic;
+                    }
+                } else {
+                    // 没有找到音标数据时
+                    if (usPhoneticIndex >= 0) {
+                        jsonData[i][usPhoneticIndex] = 'Not Found';
+                    }
+                    if (ukPhoneticIndex >= 0) {
+                        jsonData[i][ukPhoneticIndex] = 'Not Found';
+                    }
+                }
+            }
+        }
+        
+        // 将修改后的数据转回Excel格式
+        const newWorksheet = XLSX.utils.aoa_to_sheet(jsonData);
+        workbook.Sheets[firstSheetName] = newWorksheet;
+        
+        // 生成Excel二进制数据
+        const excelBinaryData = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        
+        // 创建Blob对象
+        const blob = new Blob([excelBinaryData], { type: 'application/octet-stream' });
+        
+        // 生成下载链接
+        const fileNameWithoutExt = currentFileName.replace('.xlsx', '');
+        const downloadName = `${fileNameWithoutExt}_带音标.xlsx`;
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = downloadName;
+        document.body.appendChild(a);
+        a.click();
+        
+        // 清理
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        Logger.info('导出', `Excel文件导出成功: ${downloadName}`);
+        updateStatus(`文件已导出: ${downloadName}`);
+    } catch (error) {
+        Logger.error('导出', `导出Excel文件时出错: ${error.message}`);
+        showError(`导出文件失败: ${error.message}`);
+    }
 }
 
 /**
@@ -273,29 +546,26 @@ function displayPreview(data) {
     // 清空现有内容
     tableBody.innerHTML = '';
     
-    // 插入数据行
-    data.forEach((item, index) => {
-        // 为每行添加延迟动画效果
-        setTimeout(() => {
-            const row = document.createElement('tr');
-            row.classList.add('fade-in');
-            
-            const wordCell = document.createElement('td');
-            wordCell.textContent = item.word;
-            row.appendChild(wordCell);
-            
-            const usCell = document.createElement('td');
-            usCell.textContent = item.usPhonetic;
-            usCell.classList.add('highlight');
-            row.appendChild(usCell);
-            
-            const ukCell = document.createElement('td');
-            ukCell.textContent = item.ukPhonetic;
-            ukCell.classList.add('highlight');
-            row.appendChild(ukCell);
-            
-            tableBody.appendChild(row);
-        }, index * 100); // 每行延迟100ms
+    // 插入数据行 - 直接插入全部数据，不使用延迟
+    data.forEach((item) => {
+        const row = document.createElement('tr');
+        row.classList.add('fade-in');
+        
+        const wordCell = document.createElement('td');
+        wordCell.textContent = item.word;
+        row.appendChild(wordCell);
+        
+        const usCell = document.createElement('td');
+        usCell.textContent = item.usPhonetic;
+        usCell.classList.add('highlight');
+        row.appendChild(usCell);
+        
+        const ukCell = document.createElement('td');
+        ukCell.textContent = item.ukPhonetic;
+        ukCell.classList.add('highlight');
+        row.appendChild(ukCell);
+        
+        tableBody.appendChild(row);
     });
     
     // 显示预览区域
