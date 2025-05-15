@@ -6,104 +6,132 @@
 }
 
 body {
-    font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     line-height: 1.6;
     color: #333;
-    background-color: #f5f5f7;
-    padding: 20px;
-}
-
-/* 容器样式 */
-.container {
-    max-width: 1000px;
-    margin: 0 auto;
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+    background-color: #f9fafb;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    min-height: 80vh;
 }
 
-/* 头部样式 */
+/* 容器样式 - 全屏设计 */
+.container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 100%;
+    height: 100vh;
+    max-width: 100%;
+    margin: 0;
+    background-color: #fff;
+    overflow: hidden;
+}
+
+/* 头部样式 - 更醒目的设计 */
 header {
-    background-color: #007aff;
+    background-color: #3b82f6; /* Tailwind的蓝色 */
     color: white;
-    padding: 20px;
+    padding: 1.25rem;
     text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 header h1 {
-    margin-bottom: 10px;
-    font-weight: 500;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    font-size: 1.75rem;
 }
 
-/* 主要内容区域 */
+header p {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+/* 主要内容区域 - 占满剩余空间 */
 main {
     display: flex;
-    flex-wrap: wrap;
-    padding: 20px;
+    flex-direction: column;
+    padding: 1.5rem;
     flex: 1;
+    overflow-y: auto;
 }
 
-/* 上传区域样式 */
+/* 上传区域样式 - 更明显的虚线边框 */
 .upload-section {
-    width: 100%;
-    margin-bottom: 20px;
+    margin-bottom: 1.5rem;
 }
 
 .upload-area {
-    border: 2px dashed #007aff;
-    border-radius: 8px;
-    padding: 40px 20px;
+    border: 2px dashed #3b82f6;
+    border-radius: 0.5rem;
+    padding: 3rem 1.5rem;
     text-align: center;
-    background-color: #f0f8ff;
-    transition: all 0.3s ease;
+    background-color: #f0f7ff;
+    transition: all 0.2s ease;
     cursor: pointer;
 }
 
 .upload-area:hover, .upload-area.drag-over {
-    background-color: #e1f0ff;
-    border-color: #0056b3;
+    background-color: #e5f0ff;
+    border-color: #2563eb;
 }
 
 .upload-area p {
-    margin: 8px 0;
-    color: #555;
+    margin: 0.5rem 0;
+    color: #4b5563;
+}
+
+.upload-hint {
+    font-size: 0.75rem;
+    color: #6b7280 !important;
+    margin-top: 1rem !important;
 }
 
 #selectFileBtn {
-    background-color: #007aff;
+    background-color: #3b82f6;
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.375rem;
     cursor: pointer;
-    margin-top: 10px;
-    font-size: 16px;
-    transition: background-color 0.3s;
+    margin-top: 1rem;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: background-color 0.2s, transform 0.1s;
 }
 
 #selectFileBtn:hover {
-    background-color: #0056b3;
+    background-color: #2563eb;
+    transform: translateY(-1px);
+}
+
+#selectFileBtn:active, #selectFileBtn.active {
+    transform: translateY(1px);
 }
 
 /* 预览区域样式 */
 .preview-section {
-    width: 100%;
+    flex: 1;
     opacity: 0.7;
+    margin-bottom: 1rem;
+    transition: opacity 0.3s ease;
 }
 
 .preview-section h2 {
-    margin-bottom: 15px;
-    color: #333;
+    margin-bottom: 1rem;
+    color: #1f2937;
+    font-weight: 600;
+    font-size: 1.25rem;
 }
 
 .preview-table-container {
     overflow-x: auto;
-    border-radius: 8px;
+    border-radius: 0.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    height: calc(100% - 3rem);
+    min-height: 200px;
 }
 
 #previewTable {
@@ -112,72 +140,106 @@ main {
 }
 
 #previewTable th, #previewTable td {
-    padding: 12px 15px;
+    padding: 0.875rem 1rem;
     text-align: left;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 #previewTable th {
-    background-color: #f5f5f7;
+    background-color: #f9fafb;
     font-weight: 500;
+    color: #4b5563;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 #previewTable tbody tr:hover {
-    background-color: #f5f5f7;
+    background-color: #f9fafb;
 }
 
 /* 底部样式 */
 footer {
-    background-color: #f5f5f7;
-    padding: 15px 20px;
+    background-color: #f9fafb;
+    padding: 1rem 1.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .status-bar {
-    color: #666;
-    font-size: 14px;
+    color: #4b5563;
+    font-size: 0.875rem;
+    transition: opacity 0.3s ease;
 }
 
 #downloadBtn {
-    background-color: #34c759;
+    background-color: #10b981; /* Tailwind的绿色 */
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.375rem;
     cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
 }
 
 #downloadBtn:disabled {
-    background-color: #a8a8a8;
+    background-color: #9ca3af;
     cursor: not-allowed;
+    opacity: 0.7;
 }
 
 #downloadBtn:not(:disabled):hover {
-    background-color: #28a745;
+    background-color: #059669;
+    transform: translateY(-1px);
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
+#downloadBtn:not(:disabled):active, #downloadBtn.active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+/* 响应式设计 - 针对各种屏幕尺寸优化 */
+@media (min-width: 768px) {
+    main {
+        flex-direction: row;
+        gap: 1.5rem;
+    }
+    
+    .upload-section {
+        width: 40%;
+        margin-bottom: 0;
+    }
+    
+    .preview-section {
+        width: 60%;
+    }
+}
+
+@media (max-width: 767px) {
     .upload-section, .preview-section {
         width: 100%;
     }
     
     .upload-area {
-        padding: 20px 10px;
+        padding: 2rem 1rem;
     }
     
     footer {
         flex-direction: column;
-        gap: 10px;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+    }
+    
+    #downloadBtn {
+        width: 100%;
     }
 }
 
-/* 加载动画 */
+/* 加载动画 - 改进动画效果 */
 .loading {
     position: relative;
 }
@@ -189,11 +251,9 @@ footer {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(255, 255, 255, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    background-color: rgba(255, 255, 255, 0.75);
     z-index: 10;
+    backdrop-filter: blur(2px);
 }
 
 .loading::before {
@@ -201,13 +261,13 @@ footer {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 30px;
-    height: 30px;
-    margin: -15px 0 0 -15px;
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #007aff;
+    width: 2.5rem;
+    height: 2.5rem;
+    margin: -1.25rem 0 0 -1.25rem;
+    border: 3px solid rgba(219, 234, 254, 0.8);
+    border-top: 3px solid #3b82f6;
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    animation: spin 0.8s linear infinite;
     z-index: 11;
 }
 
@@ -218,21 +278,45 @@ footer {
 
 /* 错误信息样式 */
 .error-message {
-    background-color: #ffebee;
-    color: #d32f2f;
-    padding: 10px;
-    border-radius: 5px;
-    margin: 10px 0;
-    border-left: 4px solid #d32f2f;
+    background-color: #fee2e2;
+    color: #b91c1c;
+    padding: 0.75rem 1rem;
+    border-radius: 0.375rem;
+    margin: 0.75rem 0;
+    border-left: 4px solid #dc2626;
+    animation: slideIn 0.3s ease-out;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+@keyframes slideIn {
+    0% { 
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    100% { 
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* 高亮样式用于新增的音标列 */
 .highlight {
-    background-color: #e8f5e9;
+    background-color: #d1fae5;
     animation: highlightFade 2s forwards;
 }
 
 @keyframes highlightFade {
-    from { background-color: #e8f5e9; }
-    to { background-color: transparent; }
+    0% { background-color: #d1fae5; }
+    70% { background-color: #d1fae5; }
+    100% { background-color: transparent; }
+}
+
+/* 添加淡入效果 */
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 } 
