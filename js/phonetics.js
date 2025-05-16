@@ -96,12 +96,8 @@ function shouldTokenize(phrase) {
         return false;
     }
     
-    // 如果单词数量超过3个，通常应该分词
-    const wordCount = phrase.split(' ').length;
-    if (wordCount > 3) return true;
-    
-    // 对于2-3个单词的情况，先尝试整体查询
-    return false;
+    // 对于包含空格的短语，始终返回true进行分词处理
+    return true;
 }
 
 /**
@@ -115,8 +111,8 @@ function tokenize(phrase) {
     // 首先判断是否需要分词
     if (!shouldTokenize(phrase)) return [phrase];
     
-    // 简单的空格分词
-    const words = phrase.split(' ').filter(word => word.length > 0);
+    // 空格分词并过滤空字符串
+    const words = phrase.split(' ').filter(word => word.trim().length > 0);
     Logger.debug('单词处理', `分词: "${phrase}" -> ${JSON.stringify(words)}`);
     
     return words;
@@ -247,13 +243,33 @@ async function queryPhonetic(originalWord) {
     // 分词处理
     const tokens = tokenize(processedWord);
     
-    // 如果是多个单词，可能需要分别查询后合并
+    // 如果是多个单词，逐个查询音标并合并结果
     if (tokens.length > 1) {
         Logger.info('音标查询', `分词处理: ${processedWord} -> ${tokens.join(', ')}`);
         
-        // 这里简化处理，只返回第一个单词的音标
-        // 实际应用中可能需要更复杂的合并逻辑
-        return await queryPhoneticSingle(tokens[0]);
+        // 存储每个单词的音标结果
+        const ukPhonetics = [];
+        const usPhonetics = [];
+        
+        // 逐个查询每个单词的音标
+        for (const token of tokens) {
+            const result = await queryPhoneticSingle(token);
+            
+            // 只添加有效的音标（不是"Not Found"的音标）
+            if (result.uk !== 'Not Found') {
+                ukPhonetics.push(result.uk);
+            }
+            
+            if (result.us !== 'Not Found') {
+                usPhonetics.push(result.us);
+            }
+        }
+        
+        // 合并音标结果
+        return {
+            uk: ukPhonetics.length > 0 ? ukPhonetics.join(' ') : 'Not Found',
+            us: usPhonetics.length > 0 ? usPhonetics.join(' ') : 'Not Found'
+        };
     }
     
     return await queryPhoneticSingle(processedWord);
