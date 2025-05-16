@@ -10,7 +10,22 @@
     <!-- CORS代理服务 -->
     <script>
         // 配置CORS代理
-        window.CORS_PROXY = 'https://corsproxy.io/?';
+        // 使用多个备选代理，提高可靠性
+        const corsProxies = [
+            'https://corsproxy.io/?',
+            'https://cors-anywhere.herokuapp.com/',
+            'https://api.allorigins.win/raw?url='
+        ];
+        window.CORS_PROXY = corsProxies[0]; // 默认使用第一个
+        
+        // 自动切换代理的函数
+        window.switchCORSProxy = function() {
+            const currentIndex = corsProxies.indexOf(window.CORS_PROXY);
+            const nextIndex = (currentIndex + 1) % corsProxies.length;
+            window.CORS_PROXY = corsProxies[nextIndex];
+            console.log(`切换到下一个CORS代理: ${window.CORS_PROXY}`);
+            return window.CORS_PROXY;
+        }
     </script>
     <!-- 日志系统 -->
     <script src="js/logger.js"></script>

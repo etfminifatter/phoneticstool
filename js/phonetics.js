@@ -223,9 +223,10 @@ async function queryRemoteAPI(word) {
     console.log(`通过远程api 查询 ${word}`);
     
     // 最大重试次数
-    const maxRetries = 2;
+    const maxRetries = 3; // 增加重试次数，因为可能需要尝试不同代理
     let retryCount = 0;
     let lastError = null;
+    let proxyChanged = false;
     
     while (retryCount <= maxRetries) {
         try {
@@ -234,15 +235,22 @@ async function queryRemoteAPI(word) {
                 const delay = retryCount * 500; // 递增延迟
                 Logger.info('音标查询', `第${retryCount}次重试，延迟${delay}ms: ${word}`);
                 await new Promise(resolve => setTimeout(resolve, delay));
+                
+                // 在第二次重试时尝试切换到下一个代理
+                if (retryCount >= 2 && typeof window.switchCORSProxy === 'function' && !proxyChanged) {
+                    window.switchCORSProxy();
+                    proxyChanged = true;
+                    Logger.info('音标查询', `已切换到新的代理服务`);
+                }
             }
             
-            // 使用本地代理服务器查询
-            // 添加时间戳避免缓存
+            // 使用CORS代理服务替代本地代理服务器
             const timestamp = Date.now();
-            const url = `http://localhost:8000/api/${encodeURIComponent(word)}?t=${timestamp}`;
+            const apiUrl = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`;
+            const url = `${window.CORS_PROXY}${encodeURIComponent(apiUrl)}?t=${timestamp}`;
             
-            Logger.debug('音标查询', `通过本地代理请求API: ${url}`);
-            console.log(`尝试${retryCount > 0 ? '第'+(retryCount)+'次' : ''}本地代理请求: ${url}`);
+            Logger.debug('音标查询', `通过CORS代理请求API: ${url}`);
+            console.log(`尝试${retryCount > 0 ? '第'+(retryCount)+'次' : ''}CORS代理请求: ${url}`);
             
             // 添加超时控制
             const controller = new AbortController();
@@ -365,9 +373,7 @@ async function queryRemoteAPI(word) {
     
     // 所有重试都失败了，记录错误
     Logger.error('音标查询', `远程API查询彻底失败: ${lastError.message}`);
-    Logger.error('API诊断', `请确保本地代理服务器已启动，运行命令：
-    python py/proxy_server.py
-    然后刷新页面重试`);
+    Logger.error('API诊断', `远程API请求失败，可能是网络问题或API服务不可用，已尝试所有可用代理`);
     
     return {
         uk: 'Not Found',
