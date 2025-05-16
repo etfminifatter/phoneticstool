@@ -41,41 +41,105 @@
             <p>上传Excel文件，自动生成英式和美式音标</p>
         </header>
         
-        <main>
-            <section class="upload-section">
-                <div class="upload-area" id="uploadArea">
-                    <p>拖拽Excel文件到这里</p>
-                    <p>或</p>
-                    <button id="selectFileBtn">点击选择文件</button>
-                    <input type="file" id="fileInput" accept=".xlsx" hidden>
-                    <p class="upload-hint">支持.xlsx格式，最大10MB</p>
+        <main class="two-column-layout">
+            <!-- 左侧：操作区 -->
+            <section class="operation-panel">
+                <!-- 文件上传区域 -->
+                <div class="panel-section" id="uploadSection">
+                    <h2 class="section-title">上传Excel文件</h2>
+                    <div class="upload-area" id="uploadArea">
+                        <p>拖拽Excel文件到这里</p>
+                        <p>或</p>
+                        <button id="selectFileBtn" class="primary-button">点击选择文件</button>
+                        <input type="file" id="fileInput" accept=".xlsx" hidden>
+                        <p class="upload-hint">支持.xlsx格式，最大10MB</p>
+                    </div>
+                    <div class="file-info" id="fileInfo">
+                        <!-- 文件信息将显示在这里 -->
+                    </div>
+                </div>
+                
+                <!-- 列选择区域 -->
+                <div class="panel-section" id="columnSelectSection">
+                    <h2 class="section-title">选择单词列</h2>
+                    <div class="form-group">
+                        <label for="columnSelect">选择包含单词的列：</label>
+                        <select id="columnSelect" class="column-select"></select>
+                        <p class="helper-text">选择后右侧会预览该列内容</p>
+                    </div>
+                    <div class="config-options">
+                        <h3>处理选项</h3>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="autoProcess" checked>
+                            <label for="autoProcess">自动处理等号（例如：she's = she is）</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 操作按钮区域 -->
+                <div class="panel-section" id="actionSection">
+                    <h2 class="section-title">处理与下载</h2>
+                    <div class="action-buttons">
+                        <button id="processBtn" class="primary-button">开始处理音标</button>
+                        <button id="downloadBtn" class="success-button" disabled>下载结果</button>
+                        <button id="resetBtn" class="secondary-button">重置</button>
+                    </div>
                 </div>
             </section>
             
-            <section class="preview-section" id="previewSection">
-                <h2>预览</h2>
-                <div class="preview-table-container">
-                    <table id="previewTable">
-                        <thead>
-                            <tr>
-                                <th>单词</th>
-                                <th>美式音标</th>
-                                <th>英式音标</th>
-                            </tr>
-                        </thead>
-                        <tbody id="previewTableBody">
-                            <!-- 这里将显示预览数据 -->
-                        </tbody>
-                    </table>
+            <!-- 右侧：预览区 -->
+            <section class="preview-panel">
+                <!-- 原始数据预览 -->
+                <div class="panel-section" id="dataPreviewSection">
+                    <h2 class="section-title">原始数据预览</h2>
+                    <div class="selected-column-info">
+                        <span>当前选中：</span>
+                        <strong id="selectedColumnName">-</strong>
+                    </div>
+                    <div class="table-container">
+                        <table id="columnPreviewTable">
+                            <thead>
+                                <tr>
+                                    <th>行号</th>
+                                    <th>列名</th>
+                                    <th>原始内容</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 这里只会显示选中列的内容 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- 处理结果预览 -->
+                <div class="panel-section" id="resultPreviewSection">
+                    <h2 class="section-title">处理结果预览</h2>
+                    <div class="table-container">
+                        <table id="resultTable">
+                            <thead>
+                                <tr>
+                                    <th>单词</th>
+                                    <th>美式音标</th>
+                                    <th>英式音标</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultTableBody">
+                                <!-- 处理结果预览将显示在这里 -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
         </main>
         
         <footer>
-            <div class="status-bar" id="statusBar">
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="status-bar">
                 <span id="statusText">准备就绪，请上传Excel文件</span>
             </div>
-            <button id="downloadBtn" disabled>下载结果</button>
         </footer>
     </div>
 </body>
