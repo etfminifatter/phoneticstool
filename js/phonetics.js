@@ -83,20 +83,7 @@ function shouldTokenize(phrase) {
     // 如果不包含空格，肯定是单个单词
     if (!phrase.includes(' ')) return false;
     
-    // 常见短语和短虚词组合可以作为整体查询
-    const commonPhrases = [
-        'a lot', 'a little', 'a few', 'in order to', 'as well as', 
-        'such as', 'thanks to', 'so that', 'used to', 'would like to',
-        'get up', 'look after', 'take care', 'come back', 'find out'
-    ];
-    
-    // 检查是否是常见短语
-    if (commonPhrases.includes(phrase)) {
-        Logger.debug('单词处理', `短语"${phrase}"作为整体处理`);
-        return false;
-    }
-    
-    // 对于包含空格的短语，始终返回true进行分词处理
+    // 所有包含空格的短语都需要分词
     return true;
 }
 
@@ -108,10 +95,7 @@ function shouldTokenize(phrase) {
 function tokenize(phrase) {
     if (!phrase.includes(' ')) return [phrase];
     
-    // 首先判断是否需要分词
-    if (!shouldTokenize(phrase)) return [phrase];
-    
-    // 空格分词并过滤空字符串
+    // 所有包含空格的短语都进行分词处理
     const words = phrase.split(' ').filter(word => word.trim().length > 0);
     Logger.debug('单词处理', `分词: "${phrase}" -> ${JSON.stringify(words)}`);
     
