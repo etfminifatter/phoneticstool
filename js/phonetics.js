@@ -12,36 +12,22 @@ let phoneticsCache = {};
  * @returns {Promise} - 初始化完成的Promise
  */
 async function initPhonetics() {
-    Logger.info('音标模块', '初始化音标查询模块');
+    Logger.info('音标模块', '初始化音标查询模块 - 仅使用远程API');
     
-    // 加载本地词典数据
+    // 清空词典和缓存
+    ukDictionary = null;
+    usDictionary = null;
+    phoneticsCache = {};
+    
+    // 清除本地存储的缓存
     try {
-        const [ukResponse, usResponse] = await Promise.all([
-            fetch('openDictUK.json'),
-            fetch('openDictUS.json')
-        ]);
-        
-        ukDictionary = await ukResponse.json();
-        usDictionary = await usResponse.json();
-        
-        Logger.info('音标模块', `词典加载完成，英式词典包含 ${Object.keys(ukDictionary).length} 个单词，美式词典包含 ${Object.keys(usDictionary).length} 个单词`);
-        
-        // 尝试从localStorage加载缓存
-        try {
-            const cachedData = localStorage.getItem('phoneticsCache');
-            if (cachedData) {
-                phoneticsCache = JSON.parse(cachedData);
-                Logger.info('音标模块', `从缓存加载了 ${Object.keys(phoneticsCache).length} 个单词的音标数据`);
-            }
-        } catch (error) {
-            Logger.warning('音标模块', `无法从localStorage加载缓存: ${error.message}`);
-        }
-        
-        return true;
+        localStorage.removeItem('phoneticsCache');
+        Logger.info('音标模块', '已清除所有本地缓存和词典数据');
     } catch (error) {
-        Logger.error('音标模块', `加载词典数据失败: ${error.message}`);
-        throw new Error(`无法加载音标词典: ${error.message}`);
+        Logger.warning('音标模块', `清除缓存失败: ${error.message}`);
     }
+    
+    return true;
 }
 
 /**
@@ -470,58 +456,12 @@ async function queryPhonetic(originalWord) {
  * @returns {Promise<Object>} - 包含英式和美式音标的对象
  */
 async function queryPhoneticSingle(word) {
-    // 1. 首先检查缓存
-    const cachedResult = queryCache(word);
-    
-    // 如果缓存结果完整（两种音标都有），直接返回
-    if (cachedResult && 
-        cachedResult.uk !== 'Not Found' && 
-        cachedResult.us !== 'Not Found') {
-        Logger.debug('音标查询', `缓存完整命中: ${word}`);
-        return cachedResult;
-    }
-    
-    // 2. 查询本地词典
-    const localResult = queryLocalDictionary(word);
-    if (localResult && 
-        localResult.uk !== 'Not Found' && 
-        localResult.us !== 'Not Found') {
-        // 只有当两种音标都找到时才保存到缓存
-        saveToCache(word, localResult);
-        return localResult;
-    }
-    
-    // 3. 查询远程API获取最新数据
-    // 即使有缓存但不完整，或者有本地结果但不完整，也查询远程API
-    Logger.info('音标查询', `本地数据不完整，查询远程API: ${word}`);
+    // 直接查询远程API获取数据
+    Logger.info('音标查询', `直接查询远程API: ${word}`);
     const remoteResult = await queryRemoteAPI(word);
     
-    // 合并结果，优先使用远程API的结果，本地缺失的部分由远程补充
-    const result = {
-        uk: 'Not Found',
-        us: 'Not Found'
-    };
-    
-    // 尝试使用远程结果
-    if (remoteResult.uk !== 'Not Found') result.uk = remoteResult.uk;
-    if (remoteResult.us !== 'Not Found') result.us = remoteResult.us;
-    
-    // 如果远程结果缺失，尝试使用本地结果补充
-    if (result.uk === 'Not Found' && localResult && localResult.uk !== 'Not Found') {
-        result.uk = localResult.uk;
-    }
-    
-    if (result.us === 'Not Found' && localResult && localResult.us !== 'Not Found') {
-        result.us = localResult.us;
-    }
-    
-    // 结果完整才保存到缓存
-    if (result.uk !== 'Not Found' || result.us !== 'Not Found') {
-        saveToCache(word, result);
-        Logger.debug('音标查询', `保存合并结果到缓存: ${word} - US: ${result.us}, UK: ${result.uk}`);
-    }
-    
-    return result;
+    // 不保存到缓存，每次都从API获取最新数据
+    return remoteResult;
 }
 
 /**
@@ -534,13 +474,11 @@ async function batchQueryPhonetics(wordList, progressCallback) {
     Logger.info('音标查询', `开始批量查询，共 ${wordList.length} 个单词`);
     
     // 确保音标模块已初始化
-    if (!ukDictionary || !usDictionary) {
-        try {
-            await initPhonetics();
-        } catch (error) {
-            Logger.error('音标查询', `初始化失败: ${error.message}`);
-            throw error;
-        }
+    try {
+        await initPhonetics();
+    } catch (error) {
+        Logger.error('音标查询', `初始化失败: ${error.message}`);
+        throw error;
     }
     
     const results = [];
