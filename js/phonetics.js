@@ -484,6 +484,12 @@ async function batchQueryPhonetics(wordList, progressCallback) {
     const results = [];
     let processed = 0;
     
+    // 设置请求间隔时间（毫秒）
+    const requestInterval = 1000; // 1秒间隔，可以根据需要调整
+    
+    // 添加延迟函数
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    
     // 使用Promise.all会同时发起所有请求，可能导致API限流
     // 因此使用for循环，每次处理一个单词
     for (const item of wordList) {
@@ -508,6 +514,12 @@ async function batchQueryPhonetics(wordList, progressCallback) {
         // 调用进度回调
         if (progressCallback && typeof progressCallback === 'function') {
             progressCallback(processed, wordList.length);
+        }
+        
+        // 如果不是最后一个单词，则添加延迟
+        if (processed < wordList.length) {
+            Logger.debug('批量处理', `添加请求间隔延迟: ${requestInterval}ms`);
+            await delay(requestInterval);
         }
     }
     
